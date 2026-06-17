@@ -35,27 +35,17 @@ const iconeStatus = document.getElementById('icone-status');
   // 1. BLOQUEIO SE A URL FOR INCOMPLETA OU COM GERENTE NÃO CADASTRADO
   if (!codigoRef || !GERENTES_PERMITIDOS[codigoRef.trim()]) {
     localStorage.removeItem('speedbroker_username');
-    sessionStorage.removeItem('speedbroker_session_logged');
     exibirPainelErro("Acesso Negado", "Este código de gerente não está autorizado ou é inválido.");
     throw new Error("Acesso interrompido: Chave de referência inválida.");
   }
 
-  // 2. VERIFICAÇÃO DE ATUALIZAÇÃO (F5) NA MESMA ABA DO NAVEGADOR
-  // Se o usuário já foi validado nesta sessão atual da aba, libera direto sem registrar de novo
-  let jaRegistradoNestaSessao = sessionStorage.getItem('speedbroker_session_logged');
+  // 2. SOLICITAÇÃO OU CAPTURA DO USUÁRIO (GUIA ANÔNIMA / PRIMEIRO ACESSO)
   let nomeCorretor = localStorage.getItem('speedbroker_username');
 
-  if (jaRegistradoNestaSessao === 'true' && nomeCorretor) {
-    console.log("Sessão ativa mantida (F5 detectado). Ignorando envio duplicado para a planilha.");
-    liberarInterfaceDashboard();
-    return;
-  }
-
-  // 3. SOLICITAÇÃO OU CAPTURA DO USUÁRIO (GUIA ANÔNIMA / PRIMEIRO ACESSO)
   if (!nomeCorretor) {
     exibirFormularioIdentificacao();
   } else {
-    // Gerente válido com usuário salvo em nova aba/sessão: Registra e libera!
+    // Gerente válido com usuário salvo: envia o log em background e libera imediatamente!
     registrarAcessoPlanilha(codigoRef.trim(), nomeCorretor);
     liberarInterfaceDashboard();
   }
@@ -89,40 +79,34 @@ function exibirFormularioIdentificacao() {
       }
       localStorage.setItem('speedbroker_username', nomeDigitado);
       
-      // Registra o acesso inicial e libera o painel
+      // Envia os dados para salvar na planilha e libera a tela na hora
       registrarAcessoPlanilha(codigoRef.trim(), nomeDigitado);
       liberarInterfaceDashboard();
     });
   }
 }
 
-// Envia o comando de Log para a Planilha tratando segurança e redirecionamento de forma limpa
+// Envia o log para a planilha de modo assíncrono (sem travar a experiência do usuário)
 function registrarAcessoPlanilha(ref, usuario) {
   const urlFinal = `${URL_API_GOOGLE}?ref=${ref}&userID=${encodeURIComponent(usuario)}&_cb=${new Date().getTime()}`;
   
-  console.log("Sincronizando registro com o servidor de logs...");
-  
-  // Marca localmente que a aba atual já enviou os dados para evitar loops de rede
-  sessionStorage.setItem('speedbroker_session_logged', 'true');
+  console.log("Tentando registrar acesso na planilha...");
   
   fetch(urlFinal, { 
     method: 'GET', 
-    mode: 'cors',
-    redirect: 'follow' // Instrui o navegador a seguir o redirecionamento interno do Google sem travar no CORS
+    mode: 'no-cors' // 'no-cors' impede que erros estritos de cabeçalho do Google travem o script do navegador
   })
-  .then(response => {
-    if (!response.ok) throw new Error("Resposta de rede invalida");
-    return response.json();
+  .then(() => {
+    console.log("Requisição de log enviada com sucesso para o servidor.");
   })
-  .then(dados => console.log("Planilha sincronizada com sucesso:", dados))
   .catch(erro => {
-    // Caso o Google demore a responder ou dê um falso positivo de CORS, o log foi gravado no servidor.
-    console.warn("Log registrado de forma assíncrona no servidor.");
+    // Caso ocorra uma queda real de conexão de internet, exibe um aviso leve no console
+    console.warn("Aviso: Falha ao sincronizar em tempo real com a planilha (verifique a rede).", erro);
   });
 }
 
 function liberarInterfaceDashboard() {
-  console.log("Acesso validado com sucesso. Painel SpeedBroker liberado.");
+  console.log("Acesso liberado via validação de segurança local/contingência.");
   if (telaBloqueio) {
     telaBloqueio.style.transition = "opacity 0.4s ease";
     telaBloqueio.style.opacity = "0";
@@ -130,7 +114,7 @@ function liberarInterfaceDashboard() {
   }
 }
 
-function exibirPainelErro(titulo, message) {
+function exibirPainelErro(titulo, mensagem) {
   if (iconeStatus) {
     iconeStatus.innerHTML = `
       <svg width="70" height="70" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -142,7 +126,7 @@ function exibirPainelErro(titulo, message) {
   if (containerResultado) {
     containerResultado.innerHTML = `
       <h2 style="color: #d93025; margin-bottom: 5px;">${titulo}</h2>
-      <p style="color: #666; font-size: 14px; max-width: 280px; margin: 0 auto;">${message}</p>
+      <p style="color: #666; font-size: 14px; max-width: 280px; margin: 0 auto;">${mensagem}</p>
     `;
   }
   if (document.getElementById('lista-imoveis')) document.getElementById('lista-imoveis').innerHTML = '';
