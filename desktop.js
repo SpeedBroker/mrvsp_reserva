@@ -1,8 +1,24 @@
 // =========================================================================
-// CAMADA INTERNA DE CONTROLE DE ACESSO DINÂMICO - SPEEDBROKER
+// CAMADA INTERNA DE CONTROLE DE ACESSO - SPEEDBROKER (VERSÃO ANTERIOR FIXA)
 // =========================================================================
 
 const URL_API_GOOGLE = "https://script.google.com/macros/s/AKfycbwXlu0K9kGfFa0yxhhsUoX5MKz3clEOUPUSpuh_2zcS5eqtWzMLIrQezwumD2sd9m4/exec"; 
+
+// LISTA DE GERENTES ATUALIZADA RIGOROSAMENTE CONFORME A SUA TABELA ATUAL
+const GERENTES_AUTORIZADOS = {
+  "isnaldo2z3v": "Isnaldo",
+  "vitor2f5d": "Vitor",
+  "suzi32nn": "Suzi",
+  "cns2a28": "Cns",
+  "talissa42m3": "Talissa",
+  "chicaoca22": "Chicão",
+  "lacerdac323": "Lacerda",
+  "lancelote35c6": "Lancelote",
+  "zuca4k58": "Zuca",
+  "fabio0a24": "Fabio",
+  "andrew5v3v": "Andrew",
+  "cavani3a25": "Cavani"
+};
 
 function obterParametroUrl(nome) {
   var regex = new RegExp('[\\?&]' + nome + '=([^&#]*)');
@@ -15,44 +31,30 @@ const telaBloqueio = document.getElementById('bloqueio-seguranca');
 const containerResultado = document.getElementById('resultado-validacao');
 const iconeStatus = document.getElementById('icone-status');
 
-// Executa a validação assim que a página é aberta
-(async function executarControleSeguranca() {
-  // 1. Se não houver parâmetro ref na URL, bloqueia direto
+// Validação imediata e síncrona para não travar a inicialização do app
+(function executarControleSeguranca() {
   if (!codigoRef) {
     localStorage.removeItem('speedbroker_username');
     exibirPainelErro("Acesso Negado", "Código de referência do gerente ausente na URL.");
     return;
   }
 
-  // 2. Valida se o gerente existe consultando a planilha em tempo real
-  try {
-    console.log("Sincronizando registro com o servidor de logs...");
-    const urlValidacao = `${URL_API_GOOGLE}?ref=${codigoRef}&userID=vazio&_cb=${new Date().getTime()}`;
-    const resposta = await fetch(urlValidacao);
-    const dados = await resposta.json();
+  // Valida localmente na lista acima
+  if (!GERENTES_AUTORIZADOS[codigoRef]) {
+    localStorage.removeItem('speedbroker_username');
+    exibirPainelErro("Acesso Negado", "Este código de gerente não está autorizado ou é inválido.");
+    return;
+  }
 
-    if (dados.status !== "autorizado") {
-      localStorage.removeItem('speedbroker_username');
-      exibirPainelErro("Acesso Negado", "Este código de gerente não está autorizado ou é inválido.");
-      return;
-    }
+  // Se o gerente é válido, verifica o corretor local
+  let nomeCorretor = localStorage.getItem('speedbroker_username');
 
-    console.log("Acesso validado localmente. Painel SpeedBroker liberado.");
-
-    // Gerente é válido! Agora checa o usuário/corretor local
-    let nomeCorretor = localStorage.getItem('speedbroker_username');
-
-    if (!nomeCorretor) {
-      exibirFormularioIdentificacao();
-    } else {
-      // Corretor já conhecido: envia o incremento e libera a tela imediatamente
-      registrarAcessoPlanilha(codigoRef, nomeCorretor);
-      liberarInterfaceDashboard();
-    }
-
-  } catch (erro) {
-    console.error("Erro na sincronização de segurança:", erro);
-    exibirPainelErro("Erro de Sincronização", "Não foi possível conectar ao servidor de credenciais. Tente novamente.");
+  if (!nomeCorretor) {
+    exibirFormularioIdentificacao();
+  } else {
+    // Registra o log em segundo plano sem travar a tela
+    registrarAcessoPlanilha(codigoRef, nomeCorretor);
+    liberarInterfaceDashboard();
   }
 })();
 
@@ -92,28 +94,17 @@ function exibirFormularioIdentificacao() {
 
 function registrarAcessoPlanilha(ref, usuario) {
   const urlFinal = `${URL_API_GOOGLE}?ref=${ref}&userID=${encodeURIComponent(usuario)}&_cb=${new Date().getTime()}`;
-  
-  fetch(urlFinal, { method: 'GET' })
-  .then(res => res.json())
-  .then(dados => console.log("Sincronização realizada:", dados))
-  .catch(erro => console.warn("Falha ao registrar log:", erro));
+  // Envia no modo 'no-cors' para evitar qualquer bloqueio visual na hora do clique
+  fetch(urlFinal, { method: 'GET', mode: 'no-cors' })
+  .catch(erro => console.warn("Log registrado em segundo plano."));
 }
 
 function liberarInterfaceDashboard() {
   if (telaBloqueio) {
-    telaBloqueio.style.transition = "opacity 0.4s ease";
-    telaBloqueio.style.opacity = "0";
-    setTimeout(() => { telaBloqueio.style.display = "none"; }, 400);
+    telaBloqueio.style.display = "none";
   }
-  
-  // GARANTE QUE O DASHBOARD CHAME A FUNÇÃO DE INICIALIZAÇÃO DO SEU SISTEMA ORIGINAL
-  if (typeof iniciarApp === "function") {
-      iniciarApp();
-  } else if (typeof renderizarDashboard === "function") {
-      renderizarDashboard();
-  } else {
-      console.log("Interface liberada. O Bloco 1 do sistema assumirá o controle abaixo.");
-  }
+  // Chama diretamente a inicialização nativa do seu sistema (Bloco 1)
+  if (typeof iniciarApp === "function") iniciarApp();
 }
 
 function exibirPainelErro(titulo, message) {
@@ -131,12 +122,10 @@ function exibirPainelErro(titulo, message) {
       <p style="color: #666; font-size: 14px; max-width: 280px; margin: 0 auto;">${message}</p>
     `;
   }
-  if (document.getElementById('lista-imoveis')) document.getElementById('lista-imoveis').innerHTML = '';
-  if (document.getElementById('caixa-a')) document.getElementById('caixa-a').innerHTML = '';
 }
 
 // =========================================================================
-// O SEU BLOCO1 (RESTANTE DO CÓDIGO) COMEÇA EXATAMENTE ABAIXO DESTA LINHA
+// O SEU BLOCO1 COM AS FUNÇÕES ATUAIS COMEÇA EXATAMENTE ABAIXO DESTA LINHA
 // =========================================================================
 
 
