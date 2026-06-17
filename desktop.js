@@ -1,25 +1,8 @@
 // =========================================================================
-// CAMADA INTERNA DE CONTROLE DE ACESSO - SPEEDBROKER (MÓDULO SEGURO)
+// CAMADA INTERNA DE CONTROLE DE ACESSO DINÂMICO - SPEEDBROKER
 // =========================================================================
 
 const URL_API_GOOGLE = "https://script.google.com/macros/s/AKfycbwXlu0K9kGfFa0yxhhsUoX5MKz3clEOUPUSpuh_2zcS5eqtWzMLIrQezwumD2sd9m4/exec"; 
-
-// LISTA BLINDADA: Todos os códigos cadastrados aqui DEVEM ser escritos 
-// OBRIGATORIAMENTE em letras MINÚSCULAS para validação inteligente.
-const GERENTES_PERMITIDOS = {
-  "isnaldo2z3v": "Isnaldo",
-  "vitor2f5d": "Vitor",
-  "suzi32nn": "Suzi",
-  "cris2a20": "Cris",
-  "marcelo42m3": "Talissa", 
-  "chicaoca22": "Chicão",     // Evite acentos na chave do código se possível na planilha
-  "lacerdac323": "Lacerda",
-  "lancelote35c6": "Lancelote",
-  "zuca4k58": "Zuca",
-  "fabio9a24": "Fabio",
-  "andrew5v3v": "Andrew",
-  "cavani3a25": "Cavani"
-};
 
 function obterParametroUrl(nome) {
   var regex = new RegExp('[\\?&]' + nome + '=([^&#]*)');
@@ -27,31 +10,46 @@ function obterParametroUrl(nome) {
   return resultados === null ? '' : decodeURIComponent(resultados[1].replace(/\+/g, ' '));
 }
 
-// Pega o código da URL e já transforma tudo em letras minúsculas e remove espaços
 const codigoRef = obterParametroUrl('ref').trim().toLowerCase();
 const telaBloqueio = document.getElementById('bloqueio-seguranca');
 const containerResultado = document.getElementById('resultado-validacao');
 const iconeStatus = document.getElementById('icone-status');
 
-// Executa a validação de forma imediata assim que o script carrega
-(function executarControleSeguranca() {
-  
-  // 1. BLOQUEIO SE A URL FOR INCOMPLETA OU COM GERENTE NÃO CADASTRADO
-  if (!codigoRef || !GERENTES_PERMITIDOS[codigoRef]) {
+// Executa a validação assim que a página é aberta
+(async function executarControleSeguranca() {
+  // 1. Se não houver parâmetro ref na URL, bloqueia direto
+  if (!codigoRef) {
     localStorage.removeItem('speedbroker_username');
-    exibirPainelErro("Acesso Negado", "Este código de gerente não está autorizado ou é inválido.");
-    throw new Error("Acesso interrompido: Chave de referência inválida.");
+    exibirPainelErro("Acesso Negado", "Código de referência do gerente ausente na URL.");
+    return;
   }
 
-  // 2. SOLICITAÇÃO OU CAPTURA DO USUÁRIO (GUIA ANÔNIMA / PRIMEIRO ACESSO)
-  let nomeCorretor = localStorage.getItem('speedbroker_username');
+  // 2. Valida se o gerente existe consultando a planilha em tempo real
+  try {
+    const urlValidacao = `${URL_API_GOOGLE}?ref=${codigoRef}&userID=vazio&_cb=${new Date().getTime()}`;
+    const resposta = await fetch(urlValidacao);
+    const dados = await resposta.json();
 
-  if (!nomeCorretor) {
-    exibirFormularioIdentificacao();
-  } else {
-    // Gerente válido com usuário salvo: envia o log em background e libera imediatamente!
-    registrarAcessoPlanilha(codigoRef, nomeCorretor);
-    liberarInterfaceDashboard();
+    if (dados.status !== "autorizado") {
+      localStorage.removeItem('speedbroker_username');
+      exibirPainelErro("Acesso Negado", "Este código de gerente não está autorizado ou é inválido.");
+      return;
+    }
+
+    // Gerente é válido! Agora checa o usuário/corretor local
+    let nomeCorretor = localStorage.getItem('speedbroker_username');
+
+    if (!nomeCorretor) {
+      exibirFormularioIdentificacao();
+    } else {
+      // Corretor já conhecido: envia o incremento e libera a tela imediatamente
+      registrarAcessoPlanilha(codigoRef, nomeCorretor);
+      liberarInterfaceDashboard();
+    }
+
+  } catch (erro) {
+    console.error("Erro na sincronização de segurança:", erro);
+    exibirPainelErro("Erro de Sincronização", "Não foi possível conectar ao servidor de credenciais. Tente novamente.");
   }
 })();
 
@@ -83,7 +81,6 @@ function exibirFormularioIdentificacao() {
       }
       localStorage.setItem('speedbroker_username', nomeDigitado);
       
-      // Envia os dados para salvar na planilha e libera a tela na hora
       registrarAcessoPlanilha(codigoRef, nomeDigitado);
       liberarInterfaceDashboard();
     });
@@ -93,22 +90,13 @@ function exibirFormularioIdentificacao() {
 function registrarAcessoPlanilha(ref, usuario) {
   const urlFinal = `${URL_API_GOOGLE}?ref=${ref}&userID=${encodeURIComponent(usuario)}&_cb=${new Date().getTime()}`;
   
-  console.log("Tentando registrar acesso na planilha...");
-  
-  fetch(urlFinal, { 
-    method: 'GET', 
-    mode: 'no-cors'
-  })
-  .then(() => {
-    console.log("Requisição de log enviada com sucesso para o servidor.");
-  })
-  .catch(erro => {
-    console.warn("Aviso: Falha ao sincronizar em tempo real com a planilha.", erro);
-  });
+  fetch(urlFinal, { method: 'GET' })
+  .then(res => res.json())
+  .then(dados => console.log("Sincronização realizada:", dados))
+  .catch(erro => console.warn("Falha ao registrar log:", erro));
 }
 
 function liberarInterfaceDashboard() {
-  console.log("Acesso liberado via validação de segurança local/contingência.");
   if (telaBloqueio) {
     telaBloqueio.style.transition = "opacity 0.4s ease";
     telaBloqueio.style.opacity = "0";
@@ -135,7 +123,9 @@ function exibirPainelErro(titulo, message) {
   if (document.getElementById('caixa-a')) document.getElementById('caixa-a').innerHTML = '';
 }
 
-// O SEU BLOCO1 COMEÇA EXATAMENTE ABAIXO DESTA LINHA
+// =========================================================================
+// O SEU BLOCO1 (RESTANTE DO CÓDIGO) COMEÇA EXATAMENTE ABAIXO DESTA LINHA
+// =========================================================================
 
 
 /* ==========================================================================
