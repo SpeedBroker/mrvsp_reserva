@@ -4,18 +4,21 @@
 
 const URL_API_GOOGLE = "https://script.google.com/macros/s/AKfycbwXlu0K9kGfFa0yxhhsUoX5MKz3clEOUPUSpuh_2zcS5eqtWzMLIrQezwumD2sd9m4/exec"; 
 
-// Espelho de segurança idêntico à sua planilha para validação local imediata
+// LISTA BLINDADA: Todos os códigos cadastrados aqui DEVEM ser escritos 
+// OBRIGATORIAMENTE em letras MINÚSCULAS para validação inteligente.
 const GERENTES_PERMITIDOS = {
-  "Isnaldo2z3v": "Isnaldo",
-  "Vitor2f5d": "Vitor",
-  "Suzi32nn": "Suzi",
-  "Marcelo42m3": "Marcelo",
-  "ChicãoCa22": "Chicão",
-  "LacerdaC323": "Lacerda",
-  "Cris2a20": "Cris",
-  "Fabio9a24": "Fabio",
-  "Andrew5v3v": "Andrew",
-  "Cavani3a25": "Cavani"
+  "isnaldo2z3v": "Isnaldo",
+  "vitor2f5d": "Vitor",
+  "suzi32nn": "Suzi",
+  "cris2a20": "Cris",
+  "marcelo42m3": "Talissa", 
+  "chicaoca22": "Chicão",     // Evite acentos na chave do código se possível na planilha
+  "lacerdac323": "Lacerda",
+  "lancelote35c6": "Lancelote",
+  "zuca4k58": "Zuca",
+  "fabio9a24": "Fabio",
+  "andrew5v3v": "Andrew",
+  "cavani3a25": "Cavani"
 };
 
 function obterParametroUrl(nome) {
@@ -24,7 +27,8 @@ function obterParametroUrl(nome) {
   return resultados === null ? '' : decodeURIComponent(resultados[1].replace(/\+/g, ' '));
 }
 
-const codigoRef = obterParametroUrl('ref');
+// Pega o código da URL e já transforma tudo em letras minúsculas e remove espaços
+const codigoRef = obterParametroUrl('ref').trim().toLowerCase();
 const telaBloqueio = document.getElementById('bloqueio-seguranca');
 const containerResultado = document.getElementById('resultado-validacao');
 const iconeStatus = document.getElementById('icone-status');
@@ -33,7 +37,7 @@ const iconeStatus = document.getElementById('icone-status');
 (function executarControleSeguranca() {
   
   // 1. BLOQUEIO SE A URL FOR INCOMPLETA OU COM GERENTE NÃO CADASTRADO
-  if (!codigoRef || !GERENTES_PERMITIDOS[codigoRef.trim()]) {
+  if (!codigoRef || !GERENTES_PERMITIDOS[codigoRef]) {
     localStorage.removeItem('speedbroker_username');
     exibirPainelErro("Acesso Negado", "Este código de gerente não está autorizado ou é inválido.");
     throw new Error("Acesso interrompido: Chave de referência inválida.");
@@ -46,7 +50,7 @@ const iconeStatus = document.getElementById('icone-status');
     exibirFormularioIdentificacao();
   } else {
     // Gerente válido com usuário salvo: envia o log em background e libera imediatamente!
-    registrarAcessoPlanilha(codigoRef.trim(), nomeCorretor);
+    registrarAcessoPlanilha(codigoRef, nomeCorretor);
     liberarInterfaceDashboard();
   }
 })();
@@ -80,13 +84,12 @@ function exibirFormularioIdentificacao() {
       localStorage.setItem('speedbroker_username', nomeDigitado);
       
       // Envia os dados para salvar na planilha e libera a tela na hora
-      registrarAcessoPlanilha(codigoRef.trim(), nomeDigitado);
+      registrarAcessoPlanilha(codigoRef, nomeDigitado);
       liberarInterfaceDashboard();
     });
   }
 }
 
-// Envia o log para a planilha de modo assíncrono (sem travar a experiência do usuário)
 function registrarAcessoPlanilha(ref, usuario) {
   const urlFinal = `${URL_API_GOOGLE}?ref=${ref}&userID=${encodeURIComponent(usuario)}&_cb=${new Date().getTime()}`;
   
@@ -94,14 +97,13 @@ function registrarAcessoPlanilha(ref, usuario) {
   
   fetch(urlFinal, { 
     method: 'GET', 
-    mode: 'no-cors' // 'no-cors' impede que erros estritos de cabeçalho do Google travem o script do navegador
+    mode: 'no-cors'
   })
   .then(() => {
     console.log("Requisição de log enviada com sucesso para o servidor.");
   })
   .catch(erro => {
-    // Caso ocorra uma queda real de conexão de internet, exibe um aviso leve no console
-    console.warn("Aviso: Falha ao sincronizar em tempo real com a planilha (verifique a rede).", erro);
+    console.warn("Aviso: Falha ao sincronizar em tempo real com a planilha.", erro);
   });
 }
 
@@ -114,7 +116,7 @@ function liberarInterfaceDashboard() {
   }
 }
 
-function exibirPainelErro(titulo, mensagem) {
+function exibirPainelErro(titulo, message) {
   if (iconeStatus) {
     iconeStatus.innerHTML = `
       <svg width="70" height="70" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -126,7 +128,7 @@ function exibirPainelErro(titulo, mensagem) {
   if (containerResultado) {
     containerResultado.innerHTML = `
       <h2 style="color: #d93025; margin-bottom: 5px;">${titulo}</h2>
-      <p style="color: #666; font-size: 14px; max-width: 280px; margin: 0 auto;">${mensagem}</p>
+      <p style="color: #666; font-size: 14px; max-width: 280px; margin: 0 auto;">${message}</p>
     `;
   }
   if (document.getElementById('lista-imoveis')) document.getElementById('lista-imoveis').innerHTML = '';
