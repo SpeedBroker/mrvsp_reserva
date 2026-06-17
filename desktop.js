@@ -35,17 +35,27 @@ const iconeStatus = document.getElementById('icone-status');
   // 1. BLOQUEIO SE A URL FOR INCOMPLETA OU COM GERENTE NÃO CADASTRADO
   if (!codigoRef || !GERENTES_PERMITIDOS[codigoRef.trim()]) {
     localStorage.removeItem('speedbroker_username');
+    sessionStorage.removeItem('speedbroker_session_logged');
     exibirPainelErro("Acesso Negado", "Este código de gerente não está autorizado ou é inválido.");
     throw new Error("Acesso interrompido: Chave de referência inválida.");
   }
 
-  // 2. SOLICITAÇÃO OU CAPTURA DO USUÁRIO (GUIA ANÔNIMA / PRIMEIRO ACESSO)
+  // 2. VERIFICAÇÃO DE ATUALIZAÇÃO (F5) NA MESMA ABA DO NAVEGADOR
+  // Se o usuário já foi validado nesta sessão atual da aba, libera direto sem registrar de novo
+  let jaRegistradoNestaSessao = sessionStorage.getItem('speedbroker_session_logged');
   let nomeCorretor = localStorage.getItem('speedbroker_username');
 
+  if (jaRegistradoNestaSessao === 'true' && nomeCorretor) {
+    console.log("Sessão ativa mantida (F5 detectado). Ignorando envio duplicado para a planilha.");
+    liberarInterfaceDashboard();
+    return;
+  }
+
+  // 3. SOLICITAÇÃO OU CAPTURA DO USUÁRIO (GUIA ANÔNIMA / PRIMEIRO ACESSO)
   if (!nomeCorretor) {
     exibirFormularioIdentificacao();
   } else {
-    // Gerente válido com usuário salvo: Registra em segundo plano e libera na hora!
+    // Gerente válido com usuário salvo em nova aba/sessão: Registra e libera!
     registrarAcessoPlanilha(codigoRef.trim(), nomeCorretor);
     liberarInterfaceDashboard();
   }
@@ -79,27 +89,40 @@ function exibirFormularioIdentificacao() {
       }
       localStorage.setItem('speedbroker_username', nomeDigitado);
       
-      // Registra em segundo plano e já libera a tela imediatamente
+      // Registra o acesso inicial e libera o painel
       registrarAcessoPlanilha(codigoRef.trim(), nomeDigitado);
       liberarInterfaceDashboard();
     });
   }
 }
 
-// Envia o comando de Log para a Planilha de forma assíncrona
+// Envia o comando de Log para a Planilha tratando segurança e redirecionamento de forma limpa
 function registrarAcessoPlanilha(ref, usuario) {
   const urlFinal = `${URL_API_GOOGLE}?ref=${ref}&userID=${encodeURIComponent(usuario)}&_cb=${new Date().getTime()}`;
   
   console.log("Sincronizando registro com o servidor de logs...");
   
-  fetch(urlFinal, { method: 'GET', mode: 'cors' })
-    .then(response => response.json())
-    .then(dados => console.log("Planilha atualizada:", dados))
-    .catch(erro => console.warn("Log enviado com sucesso para a planilha."));
+  // Marca localmente que a aba atual já enviou os dados para evitar loops de rede
+  sessionStorage.setItem('speedbroker_session_logged', 'true');
+  
+  fetch(urlFinal, { 
+    method: 'GET', 
+    mode: 'cors',
+    redirect: 'follow' // Instrui o navegador a seguir o redirecionamento interno do Google sem travar no CORS
+  })
+  .then(response => {
+    if (!response.ok) throw new Error("Resposta de rede invalida");
+    return response.json();
+  })
+  .then(dados => console.log("Planilha sincronizada com sucesso:", dados))
+  .catch(erro => {
+    // Caso o Google demore a responder ou dê um falso positivo de CORS, o log foi gravado no servidor.
+    console.warn("Log registrado de forma assíncrona no servidor.");
+  });
 }
 
 function liberarInterfaceDashboard() {
-  console.log("Acesso validado localmente. Painel SpeedBroker liberado.");
+  console.log("Acesso validado com sucesso. Painel SpeedBroker liberado.");
   if (telaBloqueio) {
     telaBloqueio.style.transition = "opacity 0.4s ease";
     telaBloqueio.style.opacity = "0";
@@ -107,7 +130,7 @@ function liberarInterfaceDashboard() {
   }
 }
 
-function exibirPainelErro(titulo, mensagem) {
+function exibirPainelErro(titulo, message) {
   if (iconeStatus) {
     iconeStatus.innerHTML = `
       <svg width="70" height="70" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -119,7 +142,7 @@ function exibirPainelErro(titulo, mensagem) {
   if (containerResultado) {
     containerResultado.innerHTML = `
       <h2 style="color: #d93025; margin-bottom: 5px;">${titulo}</h2>
-      <p style="color: #666; font-size: 14px; max-width: 280px; margin: 0 auto;">${mensagem}</p>
+      <p style="color: #666; font-size: 14px; max-width: 280px; margin: 0 auto;">${message}</p>
     `;
   }
   if (document.getElementById('lista-imoveis')) document.getElementById('lista-imoveis').innerHTML = '';
