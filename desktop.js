@@ -26,6 +26,7 @@ const iconeStatus = document.getElementById('icone-status');
 
   // 2. Valida se o gerente existe consultando a planilha em tempo real
   try {
+    console.log("Sincronizando registro com o servidor de logs...");
     const urlValidacao = `${URL_API_GOOGLE}?ref=${codigoRef}&userID=vazio&_cb=${new Date().getTime()}`;
     const resposta = await fetch(urlValidacao);
     const dados = await resposta.json();
@@ -35,6 +36,8 @@ const iconeStatus = document.getElementById('icone-status');
       exibirPainelErro("Acesso Negado", "Este código de gerente não está autorizado ou é inválido.");
       return;
     }
+
+    console.log("Acesso validado localmente. Painel SpeedBroker liberado.");
 
     // Gerente é válido! Agora checa o usuário/corretor local
     let nomeCorretor = localStorage.getItem('speedbroker_username');
@@ -101,6 +104,15 @@ function liberarInterfaceDashboard() {
     telaBloqueio.style.transition = "opacity 0.4s ease";
     telaBloqueio.style.opacity = "0";
     setTimeout(() => { telaBloqueio.style.display = "none"; }, 400);
+  }
+  
+  // GARANTE QUE O DASHBOARD CHAME A FUNÇÃO DE INICIALIZAÇÃO DO SEU SISTEMA ORIGINAL
+  if (typeof iniciarApp === "function") {
+      iniciarApp();
+  } else if (typeof renderizarDashboard === "function") {
+      renderizarDashboard();
+  } else {
+      console.log("Interface liberada. O Bloco 1 do sistema assumirá o controle abaixo.");
   }
 }
 
