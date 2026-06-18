@@ -1,21 +1,23 @@
 // =========================================================================
-// CAMADA INTERNA DE CONTROLE DE ACESSO - SPEEDBROKER (VERSÃO ANTERIOR FIXA)
+// CAMADA INTERNA DE CONTROLE DE ACESSO - SPEEDBROKER (MÓDULO SEGURO)
 // =========================================================================
 
 const URL_API_GOOGLE = "https://script.google.com/macros/s/AKfycbwXlu0K9kGfFa0yxhhsUoX5MKz3clEOUPUSpuh_2zcS5eqtWzMLIrQezwumD2sd9m4/exec"; 
 
-// LISTA DE GERENTES ATUALIZADA RIGOROSAMENTE CONFORME A SUA TABELA ATUAL
+// LISTA DE GERENTES ATUALIZADA RIGOROSAMENTE - VERSÃO EMERGENCIAL
 const GERENTES_AUTORIZADOS = {
   "isnaldo2z3v": "Isnaldo",
   "vitor2f5d": "Vitor",
   "suzi32nn": "Suzi",
-  "cns2a28": "Cns",
+  "cris2a20": "Cris",        // Garante se o link for final 2a20
+  "cris2a28": "Cris",        // Garante se o link for final 2a28
+  "cns2a28": "Cris",         // Garante se o link gerou como Cns
   "talissa42m3": "Talissa",
   "chicaoca22": "Chicão",
   "lacerdac323": "Lacerda",
   "lancelote35c6": "Lancelote",
   "zuca4k58": "Zuca",
-  "fabio0a24": "Fabio",
+  "fabio9a24": "Fabio",
   "andrew5v3v": "Andrew",
   "cavani3a25": "Cavani"
 };
@@ -26,33 +28,29 @@ function obterParametroUrl(nome) {
   return resultados === null ? '' : decodeURIComponent(resultados[1].replace(/\+/g, ' '));
 }
 
+// Pega o código da URL, remove espaços e põe em minúsculo
 const codigoRef = obterParametroUrl('ref').trim().toLowerCase();
 const telaBloqueio = document.getElementById('bloqueio-seguranca');
 const containerResultado = document.getElementById('resultado-validacao');
 const iconeStatus = document.getElementById('icone-status');
 
-// Validação imediata e síncrona para não travar a inicialização do app
+// Executa a validação de forma imediata assim que o script carrega
 (function executarControleSeguranca() {
-  if (!codigoRef) {
-    localStorage.removeItem('speedbroker_username');
-    exibirPainelErro("Acesso Negado", "Código de referência do gerente ausente na URL.");
-    return;
-  }
-
-  // Valida localmente na lista acima
-  if (!GERENTES_AUTORIZADOS[codigoRef]) {
+  
+  // 1. BLOQUEIO SE A URL FOR INCOMPLETA OU COM GERENTE NÃO CADASTRADO
+  if (!codigoRef || !GERENTES_PERMITIDOS[codigoRef]) {
     localStorage.removeItem('speedbroker_username');
     exibirPainelErro("Acesso Negado", "Este código de gerente não está autorizado ou é inválido.");
-    return;
+    throw new Error("Acesso interrompido: Chave de referência inválida.");
   }
 
-  // Se o gerente é válido, verifica o corretor local
+  // 2. SOLICITAÇÃO OU CAPTURA DO USUÁRIO (GUIA ANÔNIMA / PRIMEIRO ACESSO)
   let nomeCorretor = localStorage.getItem('speedbroker_username');
 
   if (!nomeCorretor) {
     exibirFormularioIdentificacao();
   } else {
-    // Registra o log em segundo plano sem travar a tela
+    // Gerente válido com usuário salvo: envia o log em background e libera imediatamente!
     registrarAcessoPlanilha(codigoRef, nomeCorretor);
     liberarInterfaceDashboard();
   }
@@ -86,6 +84,7 @@ function exibirFormularioIdentificacao() {
       }
       localStorage.setItem('speedbroker_username', nomeDigitado);
       
+      // Envia os dados para salvar na planilha e libera a tela na hora
       registrarAcessoPlanilha(codigoRef, nomeDigitado);
       liberarInterfaceDashboard();
     });
@@ -94,17 +93,28 @@ function exibirFormularioIdentificacao() {
 
 function registrarAcessoPlanilha(ref, usuario) {
   const urlFinal = `${URL_API_GOOGLE}?ref=${ref}&userID=${encodeURIComponent(usuario)}&_cb=${new Date().getTime()}`;
-  // Envia no modo 'no-cors' para evitar qualquer bloqueio visual na hora do clique
-  fetch(urlFinal, { method: 'GET', mode: 'no-cors' })
-  .catch(erro => console.warn("Log registrado em segundo plano."));
+  
+  console.log("Tentando registrar acesso na planilha...");
+  
+  fetch(urlFinal, { 
+    method: 'GET', 
+    mode: 'no-cors'
+  })
+  .then(() => {
+    console.log("Requisição de log enviada com sucesso para o servidor.");
+  })
+  .catch(erro => {
+    console.warn("Aviso: Falha ao sincronizar em tempo real com a planilha.", erro);
+  });
 }
 
 function liberarInterfaceDashboard() {
+  console.log("Acesso liberado via validação de segurança local/contingência.");
   if (telaBloqueio) {
-    telaBloqueio.style.display = "none";
+    telaBloqueio.style.transition = "opacity 0.4s ease";
+    telaBloqueio.style.opacity = "0";
+    setTimeout(() => { telaBloqueio.style.display = "none"; }, 400);
   }
-  // Chama diretamente a inicialização nativa do seu sistema (Bloco 1)
-  if (typeof iniciarApp === "function") iniciarApp();
 }
 
 function exibirPainelErro(titulo, message) {
@@ -122,11 +132,11 @@ function exibirPainelErro(titulo, message) {
       <p style="color: #666; font-size: 14px; max-width: 280px; margin: 0 auto;">${message}</p>
     `;
   }
+  if (document.getElementById('lista-imoveis')) document.getElementById('lista-imoveis').innerHTML = '';
+  if (document.getElementById('caixa-a')) document.getElementById('caixa-a').innerHTML = '';
 }
 
-// =========================================================================
-// O SEU BLOCO1 COM AS FUNÇÕES ATUAIS COMEÇA EXATAMENTE ABAIXO DESTA LINHA
-// =========================================================================
+// O SEU BLOCO1 COMEÇA EXATAMENTE ABAIXO DESTA LINHA
 
 
 /* ==========================================================================
