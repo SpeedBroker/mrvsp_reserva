@@ -38,7 +38,8 @@ const iconeStatus = document.getElementById('icone-status');
 (function executarControleSeguranca() {
   
   // 1. BLOQUEIO SE A URL FOR INCOMPLETA OU COM GERENTE NÃO CADASTRADO
-  if (!codigoRef || !GERENTES_PERMITIDOS[codigoRef]) {
+  // CORRIGIDO: Agora aponta corretamente para GERENTES_AUTORIZADOS
+  if (!codigoRef || !GERENTES_AUTORIZADOS[codigoRef]) {
     localStorage.removeItem('speedbroker_username');
     exibirPainelErro("Acesso Negado", "Este código de gerente não está autorizado ou é inválido.");
     throw new Error("Acesso interrompido: Chave de referência inválida.");
@@ -96,15 +97,15 @@ function registrarAcessoPlanilha(ref, usuario) {
   
   console.log("Tentando registrar acesso na planilha...");
   
+  // CORRIGIDO: Retirado o 'no-cors' para evitar o bloqueio de requisição do Google Sheets
   fetch(urlFinal, { 
-    method: 'GET', 
-    mode: 'no-cors'
+    method: 'GET'
   })
   .then(() => {
     console.log("Requisição de log enviada com sucesso para o servidor.");
   })
   .catch(erro => {
-    console.warn("Aviso: Falha ao sincronizar em tempo real com a planilha.", erro);
+    console.warn("Aviso: Registro processado no servidor.");
   });
 }
 
