@@ -168,7 +168,7 @@
     <main>
         <div class="card-resumo">
             <div class="card-info">
-                <h2 id="nome-gerente">Gerente: Buscando dados...</h2>
+                <h2 id="nome-gerente">Gerente: Sincronizando...</h2>
                 <span id="codigo-reg">Código Ref: Verificando...</span>
             </div>
             <div class="badge-total" id="contador-corretores">0 CORRETORES UTILIZANDO</div>
@@ -185,7 +185,7 @@
                 </thead>
                 <tbody id="tabela-corpo">
                     <tr>
-                        <td colspan="3" id="msg-conectar" class="status-carregando">Sincronizando com a planilha master em tempo real...</td>
+                        <td colspan="3" id="msg-conectar" class="status-carregando">Conectando ao servidor seguro do Google...</td>
                     </tr>
                 </tbody>
             </table>
@@ -193,7 +193,6 @@
     </main>
 
     <script>
-        // 🌐 URL de implantação confirmada pelo seu painel do Apps Script
         const URL_API_GOOGLE = "https://script.google.com/macros/s/AKfycbwXlu0K9kGfFa0yxhhsUoX5MKz3clEOUPUSpuh_2zcS5eqtWzMLIrQezwumD2sd9m4/exec";
 
         function obterParametroUrl(nome) {
@@ -203,31 +202,19 @@
         }
 
         const codigoRef = obterParametroUrl('ref').trim().toLowerCase();
+        let dadosCarregadosComSucesso = false;
 
-        // Tratamento unificado tanto para retorno direto do callback JSONP quanto para possíveis strings envelopadas
-        window.processarRespostaGerente = function(dados) {
-            console.log("Dados brutos recebidos da API:", dados);
+        // Renderizador da tabela e do card de informações
+        function renderizarInterface(dadosTratados) {
             const corpo = document.getElementById('tabela-corpo');
             
-            let dadosTratados = dados;
-            
-            // Se o retorno vier acidentalmente como String JSON pura, fazemos o parse automático de segurança
-            if (typeof dados === 'string') {
-                try {
-                    dadosTratados = JSON.parse(dados);
-                } catch(e) {
-                    console.error("Falha ao analisar string JSON recebida:", e);
-                }
-            }
-            
             if (!dadosTratados || dadosTratados.status === "recusado" || dadosTratados.status === "erro") {
-                corpo.innerHTML = `<tr><td colspan="3" style="color: #d93025; text-align: center; font-weight: bold; padding: 20px;">Acesso Negado: Código de gerente inválido ou erro de processamento.</td></tr>`;
+                corpo.innerHTML = `<tr><td colspan="3" style="color: #d93025; text-align: center; font-weight: bold; padding: 20px;">Acesso Negado: Código "${codigoRef.toUpperCase()}" não localizado ou erro na planilha.</td></tr>`;
                 document.getElementById('nome-gerente').innerText = "Erro de Autenticação";
                 return;
             }
 
-            // Atualiza os dados do cabeçalho do Gerente no card
-            document.getElementById('nome-gerente').innerText = `Gerente: ${dadosTratados.gerente || 'Painel de Controle'}`;
+            document.getElementById('nome-gerente').innerText = `Gerente: ${dadosTratados.gerente || 'Painel Técnico'}`;
             document.getElementById('codigo-reg').innerText = `Código Ref Cadastrado: ${codigoRef.toUpperCase()}`;
 
             const equipe = dadosTratados.equipe || [];
@@ -249,27 +236,79 @@
                     corpo.appendChild(tr);
                 });
             }
+        }
+
+        // Rota primária: Callback Global JSONP
+        window.processarRespostaGerente = function(dados) {
+            console.log("Resposta JSONP interceptada com sucesso:", dados);
+            dadosCarregadosComSucesso = true;
+            
+            let processados = dados;
+            if (typeof dados === 'string') {
+                try { processados = JSON.parse(dados); } catch(e) {}
+            }
+            renderizarInterface(processados);
         };
 
-        function conectarPainelReal() {
+        // Rota secundária (Contingência por Fetch direto caso o JSONP falhe)
+        async function buscarViaFetchAlternativo() {
+            if (dadosCarregadosComSucesso) return;
+            console.log("Iniciando contingência via requisição assíncrona direta...");
+            
+            try {
+                const resposta = await fetch(`${URL_API_GOOGLE}?ref=${codigoRef}&userID=requisicao_painel`);
+                if (!resposta.ok) throw new Error("Erro de resposta da rede");
+                const texto = await resposta.text();
+                
+                let jsonLimpo = texto;
+                if (texto.includes("(")) {
+                    jsonLimpo = texto.substring(texto.indexOf("(") + 1, texto.lastIndexOf(")"));
+                }
+                
+                const dados = JSON.parse(jsonLimpo);
+                console.log("Dados extraídos com sucesso na contingência:", dados);
+                renderizarInterface(dados);
+            } catch (erro) {
+                console.error("Ambos os canais falharam:", erro);
+                document.getElementById('tabela-corpo').innerHTML = `
+                    <tr>
+                        <td colspan="3" style="color: #d93025; text-align: center; font-weight: bold; padding: 20px;">
+                            Não foi possível obter dados da planilha.<br>
+                            <small style="color: #666; font-weight: normal; margin-top: 5px; display: block;">
+                                Certifique-se de que autorizou o script a rodar clicando no botão "Executar" dentro do painel do Apps Script.
+                            </small>
+                        </td>
+                    </tr>`;
+            }
+        }
+
+        function iniciarSincronizacao() {
             if (!codigoRef) {
-                document.getElementById('tabela-corpo').innerHTML = `<tr><td colspan="3" style="color: #d93025; text-align: center; font-weight: bold; padding: 20px;">Erro de Link: Código de referência (?ref=) não encontrado na URL.</td></tr>`;
+                document.getElementById('tabela-corpo').innerHTML = `<tr><td colspan="3" style="color: #d93025; text-align: center; font-weight: bold; padding: 20px;">Erro de Link: Código de referência (?ref=) ausente na URL.</td></tr>`;
                 document.getElementById('nome-gerente').innerText = "Link Incompleto";
                 return;
             }
 
-            // Injeção limpa da tag script apontando para a sua função de callback global
+            // Dispara canal principal JSONP
             const script = document.createElement('script');
-            script.src = `${URL_API_GOOGLE}?ref=${codigoRef}&userID=requisicao_painel&callback=processarRespostaGerente&_timestamp=${new Date().getTime()}`;
+            script.src = `${URL_API_GOOGLE}?ref=${codigoRef}&userID=requisicao_painel&callback=processarRespostaGerente&_ts=${new Date().getTime()}`;
             
             script.onerror = function() {
-                document.getElementById('tabela-corpo').innerHTML = `<tr><td colspan="3" style="color: #d93025; text-align: center; font-weight: bold; padding: 20px;">Erro crítico de comunicação com a API do Google. Certifique-se de que a planilha está ativa.</td></tr>`;
+                console.warn("Canal JSONP falhou ou retornou bloco inválido. Ativando contingência...");
+                setTimeout(buscarViaFetchAlternativo, 500);
             };
             
             document.body.appendChild(script);
+
+            // Temporizador de salvaguarda: se em 4 segundos o JSONP não responder, ativa o canal reserva
+            setTimeout(() => {
+                if (!dadosCarregadosComSucesso) {
+                    buscarViaFetchAlternativo();
+                }
+            }, 4000);
         }
 
-        window.onload = conectarPainelReal;
+        window.onload = iniciarSincronizacao;
     </script>
 </body>
 </html>
