@@ -185,7 +185,7 @@
                 </thead>
                 <tbody id="tabela-corpo">
                     <tr>
-                        <td colspan="3" id="msg-conectar" class="status-carregando">Conectando ao servidor seguro do Google...</td>
+                        <td colspan="3" id="msg-conectar" class="status-carregando">Conectando ao canal seguro SpeedBroker...</td>
                     </tr>
                 </tbody>
             </table>
@@ -202,19 +202,24 @@
         }
 
         const codigoRef = obterParametroUrl('ref').trim().toLowerCase();
-        let dadosCarregadosComSucesso = false;
 
-        // Renderizador da tabela e do card de informações
-        function renderizarInterface(dadosTratados) {
+        // Callback receptor do JSONP legítimo
+        window.processarRespostaGerente = function(dados) {
+            console.log("Sucesso absoluto! Dados brutos recebidos da API:", dados);
             const corpo = document.getElementById('tabela-corpo');
             
+            let dadosTratados = dados;
+            if (typeof dados === 'string') {
+                try { dadosTratados = JSON.parse(dados); } catch(e) {}
+            }
+            
             if (!dadosTratados || dadosTratados.status === "recusado" || dadosTratados.status === "erro") {
-                corpo.innerHTML = `<tr><td colspan="3" style="color: #d93025; text-align: center; font-weight: bold; padding: 20px;">Acesso Negado: Código "${codigoRef.toUpperCase()}" não localizado ou erro na planilha.</td></tr>`;
+                corpo.innerHTML = `<tr><td colspan="3" style="color: #d93025; text-align: center; font-weight: bold; padding: 20px;">Acesso Negado: Código "${codigoRef.toUpperCase()}" não localizado na base.</td></tr>`;
                 document.getElementById('nome-gerente').innerText = "Erro de Autenticação";
                 return;
             }
 
-            document.getElementById('nome-gerente').innerText = `Gerente: ${dadosTratados.gerente || 'Painel Técnico'}`;
+            document.getElementById('nome-gerente').innerText = `Gerente: ${dadosTratados.gerente || 'Painel de Controle'}`;
             document.getElementById('codigo-reg').innerText = `Código Ref Cadastrado: ${codigoRef.toUpperCase()}`;
 
             const equipe = dadosTratados.equipe || [];
@@ -236,51 +241,7 @@
                     corpo.appendChild(tr);
                 });
             }
-        }
-
-        // Rota primária: Callback Global JSONP
-        window.processarRespostaGerente = function(dados) {
-            console.log("Resposta JSONP interceptada com sucesso:", dados);
-            dadosCarregadosComSucesso = true;
-            
-            let processados = dados;
-            if (typeof dados === 'string') {
-                try { processados = JSON.parse(dados); } catch(e) {}
-            }
-            renderizarInterface(processados);
         };
-
-        // Rota secundária (Contingência por Fetch direto caso o JSONP falhe)
-        async function buscarViaFetchAlternativo() {
-            if (dadosCarregadosComSucesso) return;
-            console.log("Iniciando contingência via requisição assíncrona direta...");
-            
-            try {
-                const resposta = await fetch(`${URL_API_GOOGLE}?ref=${codigoRef}&userID=requisicao_painel`);
-                if (!resposta.ok) throw new Error("Erro de resposta da rede");
-                const texto = await resposta.text();
-                
-                let jsonLimpo = texto;
-                if (texto.includes("(")) {
-                    jsonLimpo = texto.substring(texto.indexOf("(") + 1, texto.lastIndexOf(")"));
-                }
-                
-                const dados = JSON.parse(jsonLimpo);
-                console.log("Dados extraídos com sucesso na contingência:", dados);
-                renderizarInterface(dados);
-            } catch (erro) {
-                console.error("Ambos os canais falharam:", erro);
-                document.getElementById('tabela-corpo').innerHTML = `
-                    <tr>
-                        <td colspan="3" style="color: #d93025; text-align: center; font-weight: bold; padding: 20px;">
-                            Não foi possível obter dados da planilha.<br>
-                            <small style="color: #666; font-weight: normal; margin-top: 5px; display: block;">
-                                Certifique-se de que autorizou o script a rodar clicando no botão "Executar" dentro do painel do Apps Script.
-                            </small>
-                        </td>
-                    </tr>`;
-            }
-        }
 
         function iniciarSincronizacao() {
             if (!codigoRef) {
@@ -289,23 +250,15 @@
                 return;
             }
 
-            // Dispara canal principal JSONP
+            // Injeção limpa e direta do canal JSONP padrão
             const script = document.createElement('script');
             script.src = `${URL_API_GOOGLE}?ref=${codigoRef}&userID=requisicao_painel&callback=processarRespostaGerente&_ts=${new Date().getTime()}`;
             
             script.onerror = function() {
-                console.warn("Canal JSONP falhou ou retornou bloco inválido. Ativando contingência...");
-                setTimeout(buscarViaFetchAlternativo, 500);
+                document.getElementById('tabela-corpo').innerHTML = `<tr><td colspan="3" style="color: #d93025; text-align: center; font-weight: bold; padding: 20px;">Aguardando resposta estável do servidor do Google...</td></tr>`;
             };
             
             document.body.appendChild(script);
-
-            // Temporizador de salvaguarda: se em 4 segundos o JSONP não responder, ativa o canal reserva
-            setTimeout(() => {
-                if (!dadosCarregadosComSucesso) {
-                    buscarViaFetchAlternativo();
-                }
-            }, 4000);
         }
 
         window.onload = iniciarSincronizacao;
