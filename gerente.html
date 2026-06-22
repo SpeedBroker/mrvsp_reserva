@@ -193,7 +193,7 @@
     </main>
 
     <script>
-        // 🌐 Sua URL oficial mantida com o ID correto do deploy ativo
+        // 🌐 URL de implantação confirmada pelo seu painel do Apps Script
         const URL_API_GOOGLE = "https://script.google.com/macros/s/AKfycbwXlu0K9kGfFa0yxhhsUoX5MKz3clEOUPUSpuh_2zcS5eqtWzMLIrQezwumD2sd9m4/exec";
 
         function obterParametroUrl(nome) {
@@ -204,20 +204,33 @@
 
         const codigoRef = obterParametroUrl('ref').trim().toLowerCase();
 
-        // Esta função global vai receber a resposta envelopada gerada pela função responder() do Apps Script
+        // Tratamento unificado tanto para retorno direto do callback JSONP quanto para possíveis strings envelopadas
         window.processarRespostaGerente = function(dados) {
+            console.log("Dados brutos recebidos da API:", dados);
             const corpo = document.getElementById('tabela-corpo');
             
-            if (!dados || dados.status === "recusado" || dados.status === "erro") {
-                corpo.innerHTML = `<tr><td colspan="3" style="color: #d93025; text-align: center; font-weight: bold; padding: 20px;">Acesso Negado: Código de gerente inválido ("${codigoRef.toUpperCase()}") ou erro no servidor.</td></tr>`;
+            let dadosTratados = dados;
+            
+            // Se o retorno vier acidentalmente como String JSON pura, fazemos o parse automático de segurança
+            if (typeof dados === 'string') {
+                try {
+                    dadosTratados = JSON.parse(dados);
+                } catch(e) {
+                    console.error("Falha ao analisar string JSON recebida:", e);
+                }
+            }
+            
+            if (!dadosTratados || dadosTratados.status === "recusado" || dadosTratados.status === "erro") {
+                corpo.innerHTML = `<tr><td colspan="3" style="color: #d93025; text-align: center; font-weight: bold; padding: 20px;">Acesso Negado: Código de gerente inválido ou erro de processamento.</td></tr>`;
                 document.getElementById('nome-gerente').innerText = "Erro de Autenticação";
                 return;
             }
 
-            document.getElementById('nome-gerente').innerText = `Gerente: ${dados.gerente}`;
+            // Atualiza os dados do cabeçalho do Gerente no card
+            document.getElementById('nome-gerente').innerText = `Gerente: ${dadosTratados.gerente || 'Painel de Controle'}`;
             document.getElementById('codigo-reg').innerText = `Código Ref Cadastrado: ${codigoRef.toUpperCase()}`;
 
-            const equipe = dados.equipe || [];
+            const equipe = dadosTratados.equipe || [];
 
             if (equipe.length === 0) {
                 corpo.innerHTML = `<tr><td colspan="3" class="sem-dados">Nenhum corretor utilizou seu link até o momento.</td></tr>`;
@@ -245,9 +258,9 @@
                 return;
             }
 
-            // Criação dinâmica da tag script para contornar o bloqueio de CORS do navegador de forma definitiva
+            // Injeção limpa da tag script apontando para a sua função de callback global
             const script = document.createElement('script');
-            script.src = `${URL_API_GOOGLE}?ref=${codigoRef}&userID=requisicao_painel&callback=processarRespostaGerente&_cb=${new Date().getTime()}`;
+            script.src = `${URL_API_GOOGLE}?ref=${codigoRef}&userID=requisicao_painel&callback=processarRespostaGerente&_timestamp=${new Date().getTime()}`;
             
             script.onerror = function() {
                 document.getElementById('tabela-corpo').innerHTML = `<tr><td colspan="3" style="color: #d93025; text-align: center; font-weight: bold; padding: 20px;">Erro crítico de comunicação com a API do Google. Certifique-se de que a planilha está ativa.</td></tr>`;
