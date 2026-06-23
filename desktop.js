@@ -417,7 +417,9 @@ async function carregarPlanilha() {
                 linksPlantas: colunas[COL.LINKS_PLANTAS] || "",
                 linksImplant: colunas[COL.LINKS_IMPLANT] || "",
                 linksDiversos: colunas[COL.LINKS_DIVERSOS] || "",
-                estande: colunas[COL.ESTANDE] || ""
+                estande: colunas[COL.ESTANDE] || "",
+                // MAPEADO: Captura o valor real vindo diretamente da coluna AG
+                garagemAg: colunas[COL.AG] || "---"
             };
         }).filter(i => i !== null);
 
@@ -661,7 +663,7 @@ function montarVitrine(selecionado, listaDaCidade, nomeRegiao) {
             <strong style="font-size: 0.75rem; text-align: center; word-break: break-word; font-weight: bold; letter-spacing: 0.3px;">${selecionado.casa_paulista}</strong>
         </div>`;
 
-      html += `
+        html += `
         <div style="display: flex; width: 100%; background-color: #444444; color: #ffffff; border-bottom: 1px solid #555555; box-sizing: border-box; height: 32px;">
             <div style="flex: 1; padding: 6px 6px; border-right: 1px solid #555555; display: flex; justify-content: space-between; align-items: center; box-sizing: border-box;">
                 <label style="font-size: 0.62rem; font-weight: bold; color: #a5d6a7; text-transform: uppercase;">Entrega</label>
@@ -677,7 +679,7 @@ function montarVitrine(selecionado, listaDaCidade, nomeRegiao) {
             </div>
             <div style="flex: 1; padding: 6px 6px; display: flex; justify-content: space-between; align-items: center; box-sizing: border-box;">
                 <label style="font-size: 0.62rem; font-weight: bold; color: #a5d6a7; text-transform: uppercase;">Garagem</label>
-                <strong style="font-size: 0.72rem; color: #ffffff;">${selecionado.garagem || "---"}</strong>
+                <strong style="font-size: 0.72rem; color: #ffffff;">${selecionado.garagemAg || "---"}</strong>
             </div>
         </div>`;
 
@@ -698,7 +700,7 @@ function montarVitrine(selecionado, listaDaCidade, nomeRegiao) {
         </div>`;
         
         html += `</div>`;
-       
+        
         html += `<div style="border-radius: 4px; overflow: hidden; border: 1px solid #ddd; margin-top: 6px;">`;
         if(selecionado.estande && selecionado.estande !== "---" && selecionado.estande !== "") {
             const urlMapsEstande = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(selecionado.estande)}`;
@@ -746,7 +748,6 @@ function montarVitrine(selecionado, listaDaCidade, nomeRegiao) {
             </div>`;
         }
     } else {
-        // REVISADO: Adicionado mapeamento de cor para as faixas dos Complexos das novas regiões
         let corComplexo = "#333";
         const zUpper = selecionado.zona.toUpperCase().trim();
         
@@ -754,8 +755,8 @@ function montarVitrine(selecionado, listaDaCidade, nomeRegiao) {
         else if (zUpper === 'ZL') corComplexo = "#003399";
         else if (zUpper === 'ZN') corComplexo = "#ffd700";
         else if (zUpper === 'ZS') corComplexo = "#ff33aa";
-        else if (zUpper.includes("VALE")) corComplexo = "#8e44ad"; // Roxo elegante para RegVale
-        else if (zUpper.includes("CAMPINAS")) corComplexo = "#16a085"; // Verde-esmeralda para RegCampinas
+        else if (zUpper.includes("VALE")) corComplexo = "#8e44ad";
+        else if (zUpper.includes("CAMPINAS")) corComplexo = "#16a085";
 
         let corTexto = (zUpper === 'ZN') ? "#333" : "white";
 
