@@ -142,7 +142,7 @@ function exibirPainelErro(titulo, message) {
 
 
 /* ==========================================================================
-   BLOCO 01: CONFIGURAÇÕES E VARIÁVEIS GLOBAIS
+   BLOCO 01: CONFIGURAÇÕES E VARIÁVEIS GLOBAIS (ATUALIZADO COM GARAGEM)
    ========================================================================== */
 let DADOS_PLANILHA = [];
 let DOCUMENTOS_GERAIS = []; 
@@ -150,20 +150,21 @@ let pathAtivo = null;
 let imovelAtivo = null;  
 let mapaAtivo = 'GSP'; 
 
+// Adicionado mapeamento para a coluna GARAGEM
 const COL = {
     ID: 0, CATEGORIA: 1, ORDEM: 2, 
     ZONA: 3, 
     NOME: 4, NOME_FULL: 5,  
     ESTOQUE: 6, END: 7, TIPOLOGIAS: 8, ENTREGA: 9, 
-    P_DE: 10, P_ATE: 11, OBRA: 12, LIMITADOR: 13, 
-    REGIAO: 14, CASA_PAULISTA: 15, CAMPANHA: 16, 
-    DESC_LONGA: 18, OBSERVACOES: 19,
-    LOCALIZACAO: 20, MOBILIDADE: 21, CULTURA_LAZER: 22,    
-    COMERCIO: 23, SAUDE_EDUCACAO: 24,
-    BOOK_CLIENTE: 25, BOOK_CORRETOR: 26,
-    LINKS_VIDEOS: 27, LINKS_PLANTAS: 28,  
-    LINKS_IMPLANT: 29, LINKS_DIVERSOS: 30,
-    ESTANDE: 31 
+    P_DE: 10, P_ATE: 11, OBRA: 12, GARAGEM: 13, LIMITADOR: 14, 
+    REGIAO: 15, CASA_PAULISTA: 16, CAMPANHA: 17, 
+    DESC_LONGA: 19, OBSERVACOES: 20,
+    LOCALIZACAO: 21, MOBILIDADE: 22, CULTURA_LAZER: 23,    
+    COMERCIO: 24, SAUDE_EDUCACAO: 25,
+    BOOK_CLIENTE: 26, BOOK_CORRETOR: 27,
+    LINKS_VIDEOS: 28, LINKS_PLANTAS: 29,  
+    LINKS_IMPLANT: 30, LINKS_DIVERSOS: 31,
+    ESTANDE: 32 
 };
 
 
@@ -660,19 +661,23 @@ function montarVitrine(selecionado, listaDaCidade, nomeRegiao) {
             <strong style="font-size: 0.75rem; text-align: center; word-break: break-word; font-weight: bold; letter-spacing: 0.3px;">${selecionado.casa_paulista}</strong>
         </div>`;
 
-        html += `
+      html += `
         <div style="display: flex; width: 100%; background-color: #444444; color: #ffffff; border-bottom: 1px solid #555555; box-sizing: border-box; height: 32px;">
-            <div style="flex: 1; padding: 6px 8px; border-right: 1px solid #555555; display: flex; justify-content: space-between; align-items: center; box-sizing: border-box;">
-                <label style="font-size: 0.65rem; font-weight: bold; color: #a5d6a7; text-transform: uppercase;">Entrega</label>
-                <strong style="font-size: 0.75rem; color: #ffffff;">${selecionado.entrega}</strong>
+            <div style="flex: 1; padding: 6px 6px; border-right: 1px solid #555555; display: flex; justify-content: space-between; align-items: center; box-sizing: border-box;">
+                <label style="font-size: 0.62rem; font-weight: bold; color: #a5d6a7; text-transform: uppercase;">Entrega</label>
+                <strong style="font-size: 0.72rem; color: #ffffff;">${selecionado.entrega}</strong>
             </div>
-            <div style="flex: 1; padding: 6px 8px; border-right: 1px solid #555555; display: flex; justify-content: space-between; align-items: center; box-sizing: border-box;">
-                <label style="font-size: 0.65rem; font-weight: bold; color: #a5d6a7; text-transform: uppercase;">Obra</label>
-                <strong style="font-size: 0.75rem; color: #ffffff;">${selecionado.obra || 0}%</strong>
+            <div style="flex: 1; padding: 6px 6px; border-right: 1px solid #555555; display: flex; justify-content: space-between; align-items: center; box-sizing: border-box;">
+                <label style="font-size: 0.62rem; font-weight: bold; color: #a5d6a7; text-transform: uppercase;">Obra</label>
+                <strong style="font-size: 0.72rem; color: #ffffff;">${selecionado.obra || 0}%</strong>
             </div>
-            <div style="flex: 1; padding: 6px 8px; display: flex; justify-content: space-between; align-items: center; box-sizing: border-box;">
-                <label style="font-size: 0.65rem; font-weight: bold; color: #a5d6a7; text-transform: uppercase;">Estoque</label>
-                <strong style="font-size: 0.75rem;">${valorEstoqueColorido}</strong>
+            <div style="flex: 1; padding: 6px 6px; border-right: 1px solid #555555; display: flex; justify-content: space-between; align-items: center; box-sizing: border-box;">
+                <label style="font-size: 0.62rem; font-weight: bold; color: #a5d6a7; text-transform: uppercase;">Estoque</label>
+                <strong style="font-size: 0.72rem;">${valorEstoqueColorido}</strong>
+            </div>
+            <div style="flex: 1; padding: 6px 6px; display: flex; justify-content: space-between; align-items: center; box-sizing: border-box;">
+                <label style="font-size: 0.62rem; font-weight: bold; color: #a5d6a7; text-transform: uppercase;">Garagem</label>
+                <strong style="font-size: 0.72rem; color: #ffffff;">${selecionado.garagem || "---"}</strong>
             </div>
         </div>`;
 
