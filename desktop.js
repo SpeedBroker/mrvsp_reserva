@@ -142,7 +142,7 @@ function exibirPainelErro(titulo, message) {
 
 
 /* ==========================================================================
-   BLOCO 01: CONFIGURAÇÕES E VARIÁVEIS GLOBAIS (ATUALIZADO COM GARAGEM)
+   BLOCO 01: CONFIGURAÇÕES E VARIÁVEIS GLOBAIS
    ========================================================================== */
 let DADOS_PLANILHA = [];
 let DOCUMENTOS_GERAIS = []; 
@@ -150,21 +150,20 @@ let pathAtivo = null;
 let imovelAtivo = null;  
 let mapaAtivo = 'GSP'; 
 
-// Adicionado mapeamento para a coluna GARAGEM
 const COL = {
     ID: 0, CATEGORIA: 1, ORDEM: 2, 
     ZONA: 3, 
     NOME: 4, NOME_FULL: 5,  
     ESTOQUE: 6, END: 7, TIPOLOGIAS: 8, ENTREGA: 9, 
-    P_DE: 10, P_ATE: 11, OBRA: 12, GARAGEM: 13, LIMITADOR: 14, 
-    REGIAO: 15, CASA_PAULISTA: 16, CAMPANHA: 17, 
-    DESC_LONGA: 19, OBSERVACOES: 20,
-    LOCALIZACAO: 21, MOBILIDADE: 22, CULTURA_LAZER: 23,    
-    COMERCIO: 24, SAUDE_EDUCACAO: 25,
-    BOOK_CLIENTE: 26, BOOK_CORRETOR: 27,
-    LINKS_VIDEOS: 28, LINKS_PLANTAS: 29,  
-    LINKS_IMPLANT: 30, LINKS_DIVERSOS: 31,
-    ESTANDE: 32 
+    P_DE: 10, P_ATE: 11, OBRA: 12, LIMITADOR: 13, 
+    REGIAO: 14, CASA_PAULISTA: 15, CAMPANHA: 16, 
+    DESC_LONGA: 18, OBSERVACOES: 19,
+    LOCALIZACAO: 20, MOBILIDADE: 21, CULTURA_LAZER: 22,    
+    COMERCIO: 23, SAUDE_EDUCACAO: 24,
+    BOOK_CLIENTE: 25, BOOK_CORRETOR: 26,
+    LINKS_VIDEOS: 27, LINKS_PLANTAS: 28,  
+    LINKS_IMPLANT: 29, LINKS_DIVERSOS: 30,
+    ESTANDE: 31 
 };
 
 
@@ -399,10 +398,9 @@ async function carregarPlanilha() {
                 obra: colunas[COL.OBRA] || "0",
                 tipologiasH: colunas[COL.TIPOLOGIAS] || "", 
                 regiao: colunas[COL.REGIAO] || "---",
-                p_de: colunas[COL.P_DE] || "---",
-                p_ate: colunas[COL.P_ATE] || "---",
                 limitador: colunas[COL.LIMITADOR] || "---",
                 casa_paulista: colunas[COL.CASA_PAULISTA] || "---",
+                garagem: colunas[COL.AG] || "---", // Inclusão da coluna AG mapeada para a vitrine
                 campanha: colunas[COL.CAMPANHA] || "",
                 observacoes: colunas[COL.OBSERVACOES] || "", 
                 descLonga: colunas[COL.DESC_LONGA] || "",
@@ -417,9 +415,7 @@ async function carregarPlanilha() {
                 linksPlantas: colunas[COL.LINKS_PLANTAS] || "",
                 linksImplant: colunas[COL.LINKS_IMPLANT] || "",
                 linksDiversos: colunas[COL.LINKS_DIVERSOS] || "",
-                estande: colunas[COL.ESTANDE] || "",
-                // MAPEADO: Captura o valor real vindo diretamente da coluna AG
-                garagemAg: colunas[COL.AG] || "---"
+                estande: colunas[COL.ESTANDE] || ""
             };
         }).filter(i => i !== null);
 
@@ -653,33 +649,36 @@ function montarVitrine(selecionado, listaDaCidade, nomeRegiao) {
         }
         const valorEstoqueColorido = `<span style="color: ${corEstoque}">${selecionado.estoque || "---"} UN.</span>`;
 
+        // Linha inteira estável do Limitador
         html += `
         <div class="grid-cell full-width" style="display: flex; justify-content: center; align-items: center; padding: 6px 10px; background-color: #444444; color: #ffffff; border-bottom: 1px solid #555555; box-sizing: border-box; width: 100%; height: 32px;">
             <strong style="font-size: 0.75rem; text-align: center; word-break: break-word; font-weight: bold; letter-spacing: 0.3px;">${selecionado.limitador}</strong>
         </div>`;
 
+        // Linha inteira estável da Casa Paulista
         html += `
         <div class="grid-cell full-width" style="display: flex; justify-content: center; align-items: center; padding: 6px 10px; background-color: #444444; color: #ffffff; border-bottom: 1px solid #555555; box-sizing: border-box; width: 100%; height: 32px;">
             <strong style="font-size: 0.75rem; text-align: center; word-break: break-word; font-weight: bold; letter-spacing: 0.3px;">${selecionado.casa_paulista}</strong>
         </div>`;
 
+        // Linha inferior dividida perfeitamente em 4 colunas iguais
         html += `
         <div style="display: flex; width: 100%; background-color: #444444; color: #ffffff; border-bottom: 1px solid #555555; box-sizing: border-box; height: 32px;">
-            <div style="flex: 1; padding: 6px 6px; border-right: 1px solid #555555; display: flex; justify-content: space-between; align-items: center; box-sizing: border-box;">
-                <label style="font-size: 0.62rem; font-weight: bold; color: #a5d6a7; text-transform: uppercase;">Entrega</label>
-                <strong style="font-size: 0.72rem; color: #ffffff;">${selecionado.entrega}</strong>
+            <div style="flex: 1; padding: 6px 4px; border-right: 1px solid #555555; display: flex; justify-content: space-between; align-items: center; box-sizing: border-box;">
+                <label style="font-size: 0.58rem; font-weight: bold; color: #a5d6a7; text-transform: uppercase;">Entrega</label>
+                <strong style="font-size: 0.68rem; color: #ffffff; margin-left: 2px;">${selecionado.entrega}</strong>
             </div>
-            <div style="flex: 1; padding: 6px 6px; border-right: 1px solid #555555; display: flex; justify-content: space-between; align-items: center; box-sizing: border-box;">
-                <label style="font-size: 0.62rem; font-weight: bold; color: #a5d6a7; text-transform: uppercase;">Obra</label>
-                <strong style="font-size: 0.72rem; color: #ffffff;">${selecionado.obra || 0}%</strong>
+            <div style="flex: 1; padding: 6px 4px; border-right: 1px solid #555555; display: flex; justify-content: space-between; align-items: center; box-sizing: border-box;">
+                <label style="font-size: 0.58rem; font-weight: bold; color: #a5d6a7; text-transform: uppercase;">Obra</label>
+                <strong style="font-size: 0.68rem; color: #ffffff; margin-left: 2px;">${selecionado.obra || 0}%</strong>
             </div>
-            <div style="flex: 1; padding: 6px 6px; border-right: 1px solid #555555; display: flex; justify-content: space-between; align-items: center; box-sizing: border-box;">
-                <label style="font-size: 0.62rem; font-weight: bold; color: #a5d6a7; text-transform: uppercase;">Estoque</label>
-                <strong style="font-size: 0.72rem;">${valorEstoqueColorido}</strong>
+            <div style="flex: 1; padding: 6px 4px; border-right: 1px solid #555555; display: flex; justify-content: space-between; align-items: center; box-sizing: border-box;">
+                <label style="font-size: 0.58rem; font-weight: bold; color: #a5d6a7; text-transform: uppercase;">Estoque</label>
+                <strong style="font-size: 0.68rem; margin-left: 2px;">${valorEstoqueColorido}</strong>
             </div>
-            <div style="flex: 1; padding: 6px 6px; display: flex; justify-content: space-between; align-items: center; box-sizing: border-box;">
-                <label style="font-size: 0.62rem; font-weight: bold; color: #a5d6a7; text-transform: uppercase;">Garagem</label>
-                <strong style="font-size: 0.72rem; color: #ffffff;">${selecionado.garagemAg || "---"}</strong>
+            <div style="flex: 1; padding: 6px 4px; display: flex; justify-content: space-between; align-items: center; box-sizing: border-box;">
+                <label style="font-size: 0.58rem; font-weight: bold; color: #a5d6a7; text-transform: uppercase;">Garagem</label>
+                <strong style="font-size: 0.68rem; color: #ffffff; margin-left: 2px;">${selecionado.garagem || "---"}</strong>
             </div>
         </div>`;
 
@@ -700,7 +699,7 @@ function montarVitrine(selecionado, listaDaCidade, nomeRegiao) {
         </div>`;
         
         html += `</div>`;
-        
+       
         html += `<div style="border-radius: 4px; overflow: hidden; border: 1px solid #ddd; margin-top: 6px;">`;
         if(selecionado.estande && selecionado.estande !== "---" && selecionado.estande !== "") {
             const urlMapsEstande = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(selecionado.estande)}`;
@@ -755,8 +754,8 @@ function montarVitrine(selecionado, listaDaCidade, nomeRegiao) {
         else if (zUpper === 'ZL') corComplexo = "#003399";
         else if (zUpper === 'ZN') corComplexo = "#ffd700";
         else if (zUpper === 'ZS') corComplexo = "#ff33aa";
-        else if (zUpper.includes("VALE")) corComplexo = "#8e44ad";
-        else if (zUpper.includes("CAMPINAS")) corComplexo = "#16a085";
+        else if (zUpper.includes("VALE")) corComplexo = "#8e44ad"; 
+        else if (zUpper.includes("CAMPINAS")) corComplexo = "#16a085"; 
 
         let corTexto = (zUpper === 'ZN') ? "#333" : "white";
 
