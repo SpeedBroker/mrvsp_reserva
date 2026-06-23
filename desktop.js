@@ -385,6 +385,9 @@ async function carregarPlanilha() {
 
             const cat = (colunas[COL.CATEGORIA] || "").toUpperCase();
             
+            // Tratamento preventivo para encontrar o índice correto da Garagem
+            const dadoGaragem = colunas[COL.AG] || colunas[COL.GARAGEM] || "";
+
             return {
                 id_path: idPath,
                 tipo: cat.includes('COMPLEXO') ? 'N' : 'R',
@@ -400,7 +403,7 @@ async function carregarPlanilha() {
                 regiao: colunas[COL.REGIAO] || "---",
                 limitador: colunas[COL.LIMITADOR] || "---",
                 casa_paulista: colunas[COL.CASA_PAULISTA] || "---",
-                garagem: colunas[COL.AG] || "---", // Inclusão da coluna AG mapeada para a vitrine
+                garagem: dadoGaragem || "---", 
                 campanha: colunas[COL.CAMPANHA] || "",
                 observacoes: colunas[COL.OBSERVACOES] || "", 
                 descLonga: colunas[COL.DESC_LONGA] || "",
@@ -678,7 +681,7 @@ function montarVitrine(selecionado, listaDaCidade, nomeRegiao) {
             </div>
             <div style="flex: 1; padding: 6px 4px; display: flex; justify-content: space-between; align-items: center; box-sizing: border-box;">
                 <label style="font-size: 0.58rem; font-weight: bold; color: #a5d6a7; text-transform: uppercase;">Garagem</label>
-                <strong style="font-size: 0.68rem; color: #ffffff; margin-left: 2px;">${selecionado.garagem || "---"}</strong>
+                <strong style="font-size: 0.68rem; color: #ffffff; margin-left: 2px;">${selecionado.garagem}</strong>
             </div>
         </div>`;
 
@@ -686,7 +689,7 @@ function montarVitrine(selecionado, listaDaCidade, nomeRegiao) {
         if (selecionado.tipologiasH) {
             const lines = selecionado.tipologiasH.split(';').map(l => l.trim()).filter(l => l !== "");
             lines.forEach(linhaStr => {
-                const colsArr = linhaStr.split(',').map(c => c.trim());
+                const colsArr = inlineLimpa = linhaStr.split(',').map(c => c.trim());
                 if (colsArr.length > 1 && colsArr[1] !== "" && colsArr[0].toLowerCase().includes("partir")) {
                     precoReal = colsArr[1];
                 }
