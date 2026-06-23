@@ -296,7 +296,12 @@ path.commrv:hover, path.ativo {
 .sidebar-dir div[style*="border-left"] strong {
     font-size: 0.65rem !important;
 }
-   
+
+/* 6.3 - CONFIGURAÇÃO AUXILIAR PARA A FAINDEX (ENTREGA, OBRA, ESTOQUE, GARAGEM) */
+.sidebar-dir div[style*="background-color: #444444"] div {
+    min-width: 0; /* Impede que caixas com textos compridos estourem o container */
+}
+    
 /* ==========================================================================
    7. TABELAS DE PREÇOS (MANTIDO COMPACTO)
    ========================================================================== */
