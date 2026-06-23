@@ -340,7 +340,7 @@ async function carregarAbaDocumentos() {
         const linhasPuras = texto.split(/\r?\n/);
 
         DOCUMENTOS_GERAIS = linhasPuras.slice(1).map(linha => {
-            const inlineLimpa = line = linha.replace(/^"|"$/g, '').trim();
+            const inlineLimpa = linha.replace(/^"|"$/g, '').trim();
             if (!inlineLimpa) return null;
 
             const ultimaVirgula = inlineLimpa.lastIndexOf(',');
@@ -385,8 +385,14 @@ async function carregarPlanilha() {
 
             const cat = (colunas[COL.CATEGORIA] || "").toUpperCase();
             
-            // Tratamento preventivo para encontrar o índice correto da Garagem
-            const dadoGaragem = colunas[COL.AG] || colunas[COL.GARAGEM] || "";
+            // Captura o valor bruto da coluna de Garagem
+            let valorBrutoGaragem = colunas[COL.AG];
+            
+            // Tratamento rigoroso: se for "0", vazio, undefined ou nulo, garante que exiba corretamente
+            let dadoGaragem = "---";
+            if (valorBrutoGaragem !== undefined && valorBrutoGaragem !== null && valorBrutoGaragem.toString().trim() !== "") {
+                dadoGaragem = valorBrutoGaragem.toString().trim();
+            }
 
             return {
                 id_path: idPath,
@@ -403,7 +409,7 @@ async function carregarPlanilha() {
                 regiao: colunas[COL.REGIAO] || "---",
                 limitador: colunas[COL.LIMITADOR] || "---",
                 casa_paulista: colunas[COL.CASA_PAULISTA] || "---",
-                garagem: dadoGaragem || "---", 
+                garagem: dadoGaragem, 
                 campanha: colunas[COL.CAMPANHA] || "",
                 observacoes: colunas[COL.OBSERVACOES] || "", 
                 descLonga: colunas[COL.DESC_LONGA] || "",
