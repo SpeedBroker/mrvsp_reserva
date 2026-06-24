@@ -386,7 +386,7 @@ async function carregarPlanilha() {
             const cat = (colunas[COL.CATEGORIA] || "").toUpperCase();
             
             // Captura o valor bruto da coluna de Garagem
-            let valorBrutoGaragem = colunas[COL.AG];
+            let valorBrutoGaragem = colunas[32];
             
             // Tratamento rigoroso: se for "0", vazio, undefined ou nulo, garante que exiba corretamente
             let dadoGaragem = "---";
